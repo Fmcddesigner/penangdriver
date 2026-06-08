@@ -146,24 +146,43 @@ function createStore({ isPublicSite }) {
     }));
   }
 
+  function getBaseUrl() {
+    return process.env.RENDER_EXTERNAL_URL || process.env.BASE_URL || `http://localhost:${process.env.PORT || 3000}`;
+  }
+
+  async function saveImageToDisk(file) {
+    const uploadDir = path.join(__dirname, 'public', 'uploads');
+    fs.mkdirSync(uploadDir, { recursive: true });
+    const ext = path.extname(file.originalname).toLowerCase() || '.jpg';
+    const safeExt = ['.jpg', '.jpeg', '.png', '.webp', '.gif'].includes(ext) ? ext : '.jpg';
+    const filename = file.filename || `${Date.now()}-${crypto.randomBytes(4).toString('hex')}${safeExt}`;
+    if (file.buffer) {
+      fs.writeFileSync(path.join(uploadDir, filename), file.buffer);
+    }
+    return `${getBaseUrl()}/uploads/${filename}`;
+  }
+
   async function uploadImage(file) {
-    if (useFirebase) {
-      const bucket = firebase.getBucket();
-      const ext = path.extname(file.originalname).toLowerCase() || '.jpg';
-      const filename = `${Date.now()}-${crypto.randomBytes(4).toString('hex')}${ext}`;
-      const storagePath = `uploads/${siteKey}/${filename}`;
-      const blob = bucket.file(storagePath);
+    if (useFirebase && firebase.hasStorage()) {
+      try {
+        const bucket = firebase.getBucket();
+        const ext = path.extname(file.originalname).toLowerCase() || '.jpg';
+        const filename = `${Date.now()}-${crypto.randomBytes(4).toString('hex')}${ext}`;
+        const storagePath = `uploads/${siteKey}/${filename}`;
+        const blob = bucket.file(storagePath);
 
-      await blob.save(file.buffer, {
-        metadata: { contentType: file.mimetype }
-      });
-      await blob.makePublic();
+        await blob.save(file.buffer, {
+          metadata: { contentType: file.mimetype }
+        });
+        await blob.makePublic();
 
-      return `https://storage.googleapis.com/${bucket.name}/${storagePath}`;
+        return `https://storage.googleapis.com/${bucket.name}/${storagePath}`;
+      } catch (err) {
+        console.warn('Firebase Storage gagal, guna disk:', err.message);
+      }
     }
 
-    const baseUrl = process.env.RENDER_EXTERNAL_URL || process.env.BASE_URL || `http://localhost:${process.env.PORT || 3000}`;
-    return `${baseUrl}/uploads/${file.filename}`;
+    return saveImageToDisk(file);
   }
 
   return {

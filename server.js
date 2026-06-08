@@ -12,7 +12,7 @@ const UPLOAD_DIR = path.join(__dirname, 'public', 'uploads');
 const ALLOWED_IMAGE_EXT = new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif']);
 
 const upload = multer({
-  storage: firebase.isEnabled()
+  storage: firebase.hasStorage()
     ? multer.memoryStorage()
     : multer.diskStorage({
       destination: (req, file, cb) => {
@@ -90,6 +90,7 @@ app.get('/health', (req, res) => {
     service: site.brand,
     mode: site.mode,
     storage: store.useFirebase ? 'firebase' : 'file',
+    imageStorage: firebase.hasStorage() ? 'firebase' : 'disk',
     siteKey: store.siteKey
   });
 });
@@ -181,7 +182,10 @@ app.post('/api/upload-image', maybeAuth, (req, res) => {
       const imageUrl = await store.uploadImage(req.file);
       res.json({ imageUrl });
     } catch (uploadErr) {
-      res.status(500).json({ error: uploadErr.message || 'Gagal muat naik gambar' });
+      const msg = typeof uploadErr?.message === 'string'
+        ? uploadErr.message
+        : 'Gagal muat naik gambar';
+      res.status(500).json({ error: msg });
     }
   });
 });

@@ -3,6 +3,7 @@ const admin = require('firebase-admin');
 let db = null;
 let bucket = null;
 let enabled = false;
+let storageEnabled = false;
 
 function loadServiceAccount() {
   if (process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
@@ -23,14 +24,18 @@ function initFirebase() {
   if (!serviceAccount) return false;
 
   if (!admin.apps.length) {
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
-      storageBucket: process.env.FIREBASE_STORAGE_BUCKET || `${serviceAccount.project_id}.appspot.com`
-    });
+    const config = { credential: admin.credential.cert(serviceAccount) };
+    if (process.env.USE_FIREBASE_STORAGE === 'true' && process.env.FIREBASE_STORAGE_BUCKET) {
+      config.storageBucket = process.env.FIREBASE_STORAGE_BUCKET;
+      storageEnabled = true;
+    }
+    admin.initializeApp(config);
   }
 
   db = admin.firestore();
-  bucket = admin.storage().bucket();
+  if (storageEnabled) {
+    bucket = admin.storage().bucket();
+  }
   enabled = true;
   return true;
 }
@@ -49,8 +54,13 @@ function getBucket() {
   return bucket;
 }
 
+function hasStorage() {
+  return storageEnabled && !!bucket;
+}
+
 module.exports = {
   isEnabled,
+  hasStorage,
   getDb,
   getBucket,
   admin

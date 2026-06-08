@@ -26,10 +26,16 @@ LANGKAH 4 — Tambah ke Render (servis malaysia-ewfn)
   Key: FIREBASE_SERVICE_ACCOUNT_JSON
   Value: paste SEMUA isi fail JSON (satu baris pun OK)
 
+  Key: USE_FIREBASE_STORAGE
+  Value: true   (HANYA selepas upgrade Blaze + Storage diaktifkan)
+
   Key: FIREBASE_STORAGE_BUCKET
   Value: nama bucket dari Firebase Storage
          (contoh: my-project.appspot.com atau my-project.firebasestorage.app)
          → tengok dalam Storage → Files, URL atas tu
+
+  JANGAN set USE_FIREBASE_STORAGE / FIREBASE_STORAGE_BUCKET pada Spark plan.
+  Tanpa itu, gambar disimpan di disk server (upload galeri tetap jalan).
 
   Key: FIREBASE_SITE_KEY
   Value: public
