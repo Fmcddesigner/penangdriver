@@ -1,8 +1,32 @@
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 const { spawn } = require('child_process');
+const multer = require('multer');
 const { getAuth, requireAuth, registerAuthRoutes } = require('./auth');
+
+const UPLOAD_DIR = path.join(__dirname, 'public', 'uploads');
+const ALLOWED_IMAGE_EXT = new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif']);
+
+const upload = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => {
+      fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+      cb(null, UPLOAD_DIR);
+    },
+    filename: (req, file, cb) => {
+      const ext = path.extname(file.originalname).toLowerCase();
+      const safeExt = ALLOWED_IMAGE_EXT.has(ext) ? ext : '.jpg';
+      cb(null, `${Date.now()}-${crypto.randomBytes(4).toString('hex')}${safeExt}`);
+    }
+  }),
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (/^image\//.test(file.mimetype)) cb(null, true);
+    else cb(new Error('Hanya fail gambar dibenarkan'));
+  }
+});
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -153,6 +177,18 @@ function canManageLink(link, auth) {
 }
 
 registerAuthRoutes(app, { authEnabled: AUTH_ENABLED });
+
+app.post('/api/upload-image', maybeAuth, (req, res) => {
+  upload.single('image')(req, res, (err) => {
+    if (err) {
+      return res.status(400).json({ error: err.message || 'Gagal muat naik gambar' });
+    }
+    if (!req.file) {
+      return res.status(400).json({ error: 'Tiada gambar dipilih' });
+    }
+    res.json({ imageUrl: `${BASE_URL}/uploads/${req.file.filename}` });
+  });
+});
 
 app.get('/api/config', (req, res) => {
   const domain = BASE_URL.replace(/^https?:\/\//, '');

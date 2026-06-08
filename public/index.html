@@ -96,9 +96,14 @@
           </div>
         </div>
         <div class="form-group">
-          <label for="imageUrl">Image URL (logo/gambar) <span class="optional">(pilihan)</span></label>
-          <input type="url" id="imageUrl" placeholder="https://contoh.com/logo.png">
-          <small>Cadangan: guna link terus yang berakhir dengan .png/.jpg/.webp</small>
+          <label for="imageFile">Gambar Preview WhatsApp <span class="optional">(pilihan)</span></label>
+          <input type="file" id="imageFile" accept="image/*" class="file-input">
+          <input type="hidden" id="imageUrl">
+          <div id="imagePreview" class="image-preview hidden">
+            <img id="imagePreviewImg" alt="Preview gambar">
+            <button type="button" id="clearImage" class="link-btn">Buang gambar</button>
+          </div>
+          <small>Pilih dari galeri telefon — logo bisnes akan keluar bila share link</small>
         </div>
         <button type="submit" class="btn-primary">Jana Link</button>
       </form>
@@ -123,9 +128,14 @@
           </div>
         </div>
         <div class="form-group">
-          <label for="waImageUrl">Image URL (logo/gambar) <span class="optional">(pilihan)</span></label>
-          <input type="url" id="waImageUrl" placeholder="https://contoh.com/logo.png">
-          <small>Cadangan: guna link terus yang berakhir dengan .png/.jpg/.webp</small>
+          <label for="waImageFile">Gambar Preview WhatsApp <span class="optional">(pilihan)</span></label>
+          <input type="file" id="waImageFile" accept="image/*" class="file-input">
+          <input type="hidden" id="waImageUrl">
+          <div id="waImagePreview" class="image-preview hidden">
+            <img id="waImagePreviewImg" alt="Preview gambar">
+            <button type="button" id="clearWaImage" class="link-btn">Buang gambar</button>
+          </div>
+          <small>Pilih dari galeri telefon — logo bisnes akan keluar bila share link</small>
         </div>
         <button type="submit" class="btn-primary btn-whatsapp">Jana WhatsApp Link</button>
       </form>

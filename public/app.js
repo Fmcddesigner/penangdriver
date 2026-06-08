@@ -221,6 +221,62 @@ function showError(msg) {
   errorEl.classList.remove('hidden');
 }
 
+function setupImagePicker({ fileInput, hiddenInput, previewBox, previewImg, clearBtn }) {
+  async function uploadSelected(file) {
+    const fd = new FormData();
+    fd.append('image', file);
+    const headers = {};
+    if (authToken) headers.Authorization = `Bearer ${authToken}`;
+    const res = await fetchWithRetry('/api/upload-image', { method: 'POST', headers, body: fd });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Gagal muat naik gambar');
+    return data.imageUrl;
+  }
+
+  function clearImage() {
+    fileInput.value = '';
+    hiddenInput.value = '';
+    previewBox.classList.add('hidden');
+    previewImg.removeAttribute('src');
+  }
+
+  fileInput.addEventListener('change', async () => {
+    const file = fileInput.files[0];
+    if (!file) return clearImage();
+
+    try {
+      const localUrl = URL.createObjectURL(file);
+      previewImg.src = localUrl;
+      previewBox.classList.remove('hidden');
+      hiddenInput.value = await uploadSelected(file);
+      URL.revokeObjectURL(localUrl);
+      previewImg.src = hiddenInput.value;
+    } catch (err) {
+      clearImage();
+      showError(err.message || 'Gagal muat naik gambar');
+    }
+  });
+
+  clearBtn.addEventListener('click', clearImage);
+  return clearImage;
+}
+
+const clearUrlImage = setupImagePicker({
+  fileInput: document.getElementById('imageFile'),
+  hiddenInput: document.getElementById('imageUrl'),
+  previewBox: document.getElementById('imagePreview'),
+  previewImg: document.getElementById('imagePreviewImg'),
+  clearBtn: document.getElementById('clearImage')
+});
+
+const clearWaImage = setupImagePicker({
+  fileInput: document.getElementById('waImageFile'),
+  hiddenInput: document.getElementById('waImageUrl'),
+  previewBox: document.getElementById('waImagePreview'),
+  previewImg: document.getElementById('waImagePreviewImg'),
+  clearBtn: document.getElementById('clearWaImage')
+});
+
 urlForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   const url = document.getElementById('originalUrl').value.trim();
@@ -235,6 +291,7 @@ urlForm.addEventListener('submit', async (e) => {
     if (!res.ok) return showError(data.error);
     showResult(data);
     urlForm.reset();
+    clearUrlImage();
   } catch {
     showError('Ralat sambungan. Pastikan server berjalan.');
   }
@@ -255,6 +312,7 @@ waForm.addEventListener('submit', async (e) => {
     if (!res.ok) return showError(data.error);
     showResult(data);
     waForm.reset();
+    clearWaImage();
   } catch {
     showError('Ralat sambungan. Pastikan server berjalan.');
   }
