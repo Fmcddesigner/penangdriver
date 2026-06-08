@@ -17,7 +17,7 @@ services:
         value: Link pendek untuk Penang Driver Group
 
   - type: web
-    name: malaysia
+    name: malaysiastrike
     runtime: node
     plan: free
     buildCommand: npm install
