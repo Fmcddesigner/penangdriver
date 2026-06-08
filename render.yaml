@@ -29,6 +29,6 @@ services:
       - key: SITE_MODE
         value: public
       - key: BRAND
-        value: Malaysia
+        value: MY Hub
       - key: SITE_SUBTITLE
         value: Buat link custom untuk apa-apa bisnes — makanan, servis, kedai & more
