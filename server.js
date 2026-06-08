@@ -128,6 +128,14 @@ function escapeHtml(text) {
     .replace(/'/g, '&#039;');
 }
 
+function resolveOgImage(imageUrl) {
+  if (!imageUrl) return `${BASE_URL}/og-image.svg`;
+  const url = String(imageUrl).trim();
+  if (/^https?:\/\//i.test(url)) return url;
+  if (url.startsWith('/')) return `${BASE_URL}${url}`;
+  return `${BASE_URL}/${url}`;
+}
+
 function makeShortUrl(slug) {
   return `${BASE_URL}/${slug}`;
 }
@@ -166,10 +174,14 @@ app.get('/api/config', (req, res) => {
 });
 
 app.post('/api/shorten', maybeAuth, (req, res) => {
-  const { url, slug: customSlug } = req.body;
+  const { url, slug: customSlug, imageUrl } = req.body;
 
   if (!url || !isValidUrl(url)) {
     return res.status(400).json({ error: 'URL tidak sah. Pastikan bermula dengan http:// atau https://' });
+  }
+
+  if (imageUrl && !isValidUrl(imageUrl)) {
+    return res.status(400).json({ error: 'Image URL tidak sah. Guna pautan http:// atau https://' });
   }
 
   const links = readLinks();
@@ -190,6 +202,7 @@ app.post('/api/shorten', maybeAuth, (req, res) => {
 
   links[slug] = {
     url,
+    imageUrl: imageUrl || undefined,
     owner: req.auth?.username || 'public',
     createdAt: new Date().toISOString(),
     clicks: 0
@@ -200,10 +213,14 @@ app.post('/api/shorten', maybeAuth, (req, res) => {
 });
 
 app.post('/api/whatsapp', maybeAuth, (req, res) => {
-  const { phone, message, slug: customSlug } = req.body;
+  const { phone, message, slug: customSlug, imageUrl } = req.body;
 
   if (!phone || !/^\d{8,15}$/.test(phone.replace(/\D/g, ''))) {
     return res.status(400).json({ error: 'Nombor telefon tidak sah (8-15 digit)' });
+  }
+
+  if (imageUrl && !isValidUrl(imageUrl)) {
+    return res.status(400).json({ error: 'Image URL tidak sah. Guna pautan http:// atau https://' });
   }
 
   const cleanPhone = phone.replace(/\D/g, '');
@@ -232,6 +249,7 @@ app.post('/api/whatsapp', maybeAuth, (req, res) => {
     type: 'whatsapp',
     phone: cleanPhone,
     message: message || '',
+    imageUrl: imageUrl || undefined,
     owner: req.auth?.username || 'public',
     createdAt: new Date().toISOString(),
     clicks: 0
@@ -307,7 +325,7 @@ app.get('/:slug', (req, res) => {
   const destination = link.url;
   const title = site.brand || 'Custom URL Shortener';
   const description = site.subtitle || 'Preview link';
-  const ogImage = `${BASE_URL}/og-image.svg`;
+  const ogImage = resolveOgImage(link.imageUrl);
 
   // Important: WhatsApp preview bots read OG tags from HTML.
   // We serve a small preview page here (instead of redirecting straight).
