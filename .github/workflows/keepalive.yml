@@ -12,4 +12,4 @@ jobs:
       - name: Wake penangdriver
         run: curl -fsS https://penangdriver.onrender.com/health || true
       - name: Wake malaysia (public)
-        run: curl -fsS https://malaysia.onrender.com/health || true
+        run: curl -fsS https://malaysia-ewfn.onrender.com/health || true
