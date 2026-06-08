@@ -119,6 +119,15 @@ function isValidSlug(slug) {
   return /^[a-zA-Z0-9_-]+$/.test(slug) && slug.length >= 2 && slug.length <= 30;
 }
 
+function escapeHtml(text) {
+  return String(text ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 function makeShortUrl(slug) {
   return `${BASE_URL}/${slug}`;
 }
@@ -294,7 +303,46 @@ app.get('/:slug', (req, res) => {
 
   link.clicks++;
   writeLinks(links);
-  res.redirect(302, link.url);
+
+  const destination = link.url;
+  const title = site.brand || 'Custom URL Shortener';
+  const description = site.subtitle || 'Preview link';
+  const ogImage = `${BASE_URL}/og-image.svg`;
+
+  // Important: WhatsApp preview bots read OG tags from HTML.
+  // We serve a small preview page here (instead of redirecting straight).
+  res.type('html').send(`<!DOCTYPE html>
+<html lang="ms">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="${escapeHtml(title)}">
+  <meta property="og:description" content="${escapeHtml(description)}">
+  <meta property="og:image" content="${escapeHtml(ogImage)}">
+  <meta property="twitter:card" content="summary_large_image">
+  <title>${escapeHtml(title)}</title>
+</head>
+<body>
+  <p style="font-family: Arial, sans-serif; margin: 24px;">
+    <strong>${escapeHtml(title)}</strong><br/>
+    Link akan dibuka sebentar lagi...
+  </p>
+
+  <noscript>
+    <p style="font-family: Arial, sans-serif; margin: 24px;">
+      Jika link tak dibuka otomatis, sila klik:
+      <a href="${escapeHtml(destination)}">${escapeHtml(destination)}</a>
+    </p>
+  </noscript>
+
+  <script>
+    setTimeout(() => {
+      window.location.href = ${JSON.stringify(destination)};
+    }, 800);
+  </script>
+</body>
+</html>`);
 });
 
 function startPublicTunnel() {

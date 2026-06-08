@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2563eb"/>
+      <stop offset="1" stop-color="#22c55e"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="#0f1117"/>
+  <rect x="80" y="80" width="1040" height="470" rx="40" fill="url(#g)" opacity="0.18"/>
+  <circle cx="220" cy="210" r="90" fill="url(#g)" opacity="0.9"/>
+  <path d="M180 245c40 40 80 20 120-30" fill="none" stroke="#ffffff" stroke-width="14" stroke-linecap="round"/>
+  <path d="M240 150c30 0 60 25 60 55s-25 55-55 55-55-25-55-55c0-20 10-35 25-45" fill="none" stroke="#ffffff" stroke-width="14" stroke-linecap="round"/>
+  <text x="400" y="290" font-size="86" font-family="Arial, Helvetica, sans-serif" fill="#e4e6ed" font-weight="700">Malaysia</text>
+  <text x="400" y="370" font-size="42" font-family="Arial, Helvetica, sans-serif" fill="#e4e6ed" opacity="0.9">Custom URL Shortener</text>
+  <text x="400" y="430" font-size="26" font-family="Arial, Helvetica, sans-serif" fill="#e4e6ed" opacity="0.85">preview image for WhatsApp</text>
+</svg>
