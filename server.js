@@ -56,6 +56,24 @@ function writeLinks(links) {
   fs.writeFileSync(DATA_FILE, JSON.stringify(links, null, 2));
 }
 
+const DEFAULT_LINKS = {
+  Ridenow: {
+    url: 'https://chat.whatsapp.com/JZejWvD8Unc666Bih8hsLf',
+    createdAt: new Date().toISOString(),
+    clicks: 0
+  }
+};
+
+function initData() {
+  fs.mkdirSync(path.dirname(DATA_FILE), { recursive: true });
+  const links = readLinks();
+  if (Object.keys(links).length === 0) {
+    writeLinks(DEFAULT_LINKS);
+  }
+}
+
+initData();
+
 function generateSlug(length = 6) {
   const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
   let slug = '';
