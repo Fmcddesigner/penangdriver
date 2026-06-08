@@ -1,7 +1,7 @@
 {
-  "name": "penangdrivergroup",
+  "name": "penangdriver",
   "version": "1.0.0",
-  "description": "Free custom URL shortener for penangdrivergroup",
+  "description": "Free custom URL shortener for penangdriver",
   "main": "server.js",
   "engines": {
     "node": ">=18"

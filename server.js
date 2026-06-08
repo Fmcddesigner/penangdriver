@@ -233,15 +233,15 @@ async function start() {
       console.log(`  Live:   ${BASE_URL}`);
       console.log(`\n  Link percuma anda: ${BASE_URL}/nama-link\n`);
     } else if (IS_LOCAL) {
-      console.log(`  Brand:  ${config.brand || 'penangdrivergroup'}`);
-      console.log(`  Target: https://${config.freeDomain || 'penangdrivergroup.onrender.com'}`);
+      console.log(`  Brand:  ${config.brand || 'penangdriver'}`);
+      console.log(`  Target: https://${config.freeDomain || 'penangdriver.onrender.com'}`);
       console.log(`\n  Sedang buat link public sementara...`);
       try {
         const tunnel = await startPublicTunnel();
         BASE_URL = tunnel.url;
         console.log(`  Sementara: ${BASE_URL}`);
         console.log(`\n  Nak link pendek PERCUMA macam:`);
-        console.log(`  penangdrivergroup.onrender.com/grab`);
+        console.log(`  penangdriver.onrender.com/grab`);
         console.log(`  → Deploy ke Render.com (percuma, 5 minit)\n`);
 
         tunnel.proc.on('close', () => {
