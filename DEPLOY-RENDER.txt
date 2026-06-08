@@ -1,0 +1,43 @@
+CARA BETULKAN "NOT FOUND" DI RENDER
+====================================
+
+404 = servis belum wujud atau deploy gagal. Ikut langkah ini:
+
+LANGKAH 1 - Login Render
+  https://dashboard.render.com
+
+LANGKAH 2 - Buat Web Service BARU
+  Klik: New +  -->  Web Service
+  (BUKAN Static Site)
+
+LANGKAH 3 - Pilih repo GitHub
+  Repo: Fmcddesigner/penangdriver
+  (Kalau tak nampak, klik "Configure account" untuk connect GitHub)
+
+LANGKAH 4 - Isi setting EXACT macam ni:
+
+  Name:           penangdriver
+  Region:         Singapore
+  Branch:         main
+  Runtime:        Node
+  Build Command:  npm install
+  Start Command:  npm start
+  Plan:           Free
+
+LANGKAH 5 - Klik "Create Web Service"
+
+LANGKAH 6 - Tunggu deploy
+  Status mesti jadi: Live (hijau)
+  URL anda: https://penangdriver.onrender.com
+
+LANGKAH 7 - Test
+  Buka: https://penangdriver.onrender.com/health
+  Patut nampak: {"ok":true,"service":"penangdriver"}
+
+KALAU DEPLOY FAILED:
+  Klik tab "Logs" - cari baris merah ERROR
+  Screenshot dan hantar kepada developer
+
+KALAU NAMA SERVIS LAIN:
+  URL ikut nama servis. Contoh nama "penangdrivergroup"
+  = https://penangdrivergroup.onrender.com

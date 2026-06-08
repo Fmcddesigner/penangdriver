@@ -35,6 +35,14 @@ const IS_LOCAL = !process.env.RENDER_EXTERNAL_URL && BASE_URL.includes('localhos
 app.use(express.json());
 app.use(express.static('public'));
 
+app.get('/health', (req, res) => {
+  res.json({ ok: true, service: config.brand || 'penangdriver' });
+});
+
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
 function readLinks() {
   try {
     return JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
@@ -247,7 +255,7 @@ function startPublicTunnel() {
 }
 
 async function start() {
-  app.listen(PORT, async () => {
+  app.listen(PORT, '0.0.0.0', async () => {
     console.log(`\n  Custom URL Shortener berjalan!`);
     console.log(`  Local:  http://localhost:${PORT}`);
 
