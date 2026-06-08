@@ -24,7 +24,7 @@ function getSiteSettings() {
   return {
     mode,
     isPublicSite,
-    brand: process.env.BRAND || config.brand || (isPublicSite ? 'Link Malaysia' : 'Custom URL'),
+    brand: process.env.BRAND || config.brand || (isPublicSite ? 'Malaysia' : 'Custom URL'),
     subtitle: process.env.SITE_SUBTITLE || config.subtitle || (
       isPublicSite
         ? 'Buat link custom untuk apa-apa bisnes — makanan, servis, kedai & more'

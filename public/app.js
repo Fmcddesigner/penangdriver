@@ -45,7 +45,7 @@ async function loadConfig() {
     if (config.subtitle) {
       document.getElementById('siteSubtitle').textContent = config.subtitle;
     }
-    document.title = config.brand + ' — Link Pendek';
+    document.title = config.brand + (config.isPublicSite ? '' : ' — Link Pendek');
 
     const slugPlaceholder = config.isPublicSite ? 'nasi-lemak-ali' : 'Ridenow';
     document.getElementById('customSlug').placeholder = slugPlaceholder;
