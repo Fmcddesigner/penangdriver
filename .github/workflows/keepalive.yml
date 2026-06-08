@@ -9,7 +9,7 @@ jobs:
   ping:
     runs-on: ubuntu-latest
     steps:
-      - name: Wake penangdriver server
-        run: |
-          curl -fsS https://penangdriver.onrender.com/health
-          curl -fsS -o /dev/null -w "Ridenow: %{http_code}\n" https://penangdriver.onrender.com/Ridenow
+      - name: Wake penangdriver
+        run: curl -fsS https://penangdriver.onrender.com/health || true
+      - name: Wake linkkita (public)
+        run: curl -fsS https://linkkita.onrender.com/health || true

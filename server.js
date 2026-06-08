@@ -5,7 +5,6 @@ const { spawn } = require('child_process');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const DATA_FILE = path.join(__dirname, 'data', 'links.json');
 const CONFIG_FILE = path.join(__dirname, 'config.json');
 
 function loadConfig() {
@@ -17,6 +16,28 @@ function loadConfig() {
 }
 
 const config = loadConfig();
+
+function getSiteSettings() {
+  const mode = process.env.SITE_MODE || config.mode || 'branded';
+  const isPublicSite = mode === 'public';
+
+  return {
+    mode,
+    isPublicSite,
+    brand: process.env.BRAND || config.brand || (isPublicSite ? 'Link Pendek' : 'Custom URL'),
+    subtitle: process.env.SITE_SUBTITLE || config.subtitle || (
+      isPublicSite
+        ? 'Buat link custom untuk apa-apa bisnes — makanan, servis, kedai & more'
+        : 'Link pendek untuk group & servis anda'
+    ),
+    seedDefaults: !isPublicSite && process.env.SEED_DEFAULTS !== 'false'
+  };
+}
+
+const site = getSiteSettings();
+const DATA_FILE = process.env.DATA_FILE
+  ? path.join(__dirname, process.env.DATA_FILE)
+  : path.join(__dirname, 'data', site.isPublicSite ? 'links-public.json' : 'links.json');
 
 function resolveBaseUrl() {
   if (process.env.RENDER_EXTERNAL_URL) return process.env.RENDER_EXTERNAL_URL;
@@ -36,7 +57,7 @@ app.use(express.json());
 app.use(express.static('public'));
 
 app.get('/health', (req, res) => {
-  res.json({ ok: true, service: config.brand || 'penangdriver' });
+  res.json({ ok: true, service: site.brand, mode: site.mode });
 });
 
 app.get('/', (req, res) => {
@@ -67,7 +88,7 @@ const DEFAULT_LINKS = {
 function initData() {
   fs.mkdirSync(path.dirname(DATA_FILE), { recursive: true });
   const links = readLinks();
-  if (Object.keys(links).length === 0) {
+  if (Object.keys(links).length === 0 && site.seedDefaults) {
     writeLinks(DEFAULT_LINKS);
   }
 }
@@ -107,7 +128,10 @@ app.get('/api/config', (req, res) => {
     baseUrl: BASE_URL,
     displayDomain: domain,
     targetDomain,
-    brand: config.brand || 'Custom URL',
+    brand: site.brand,
+    subtitle: site.subtitle,
+    mode: site.mode,
+    isPublicSite: site.isPublicSite,
     isPublic: !BASE_URL.includes('localhost'),
     isCustomDomain: !!process.env.RENDER_EXTERNAL_URL,
     isLocal: IS_LOCAL && !BASE_URL.includes('trycloudflare'),

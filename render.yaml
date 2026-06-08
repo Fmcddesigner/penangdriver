@@ -9,3 +9,26 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      - key: SITE_MODE
+        value: branded
+      - key: BRAND
+        value: penangdriver
+      - key: SITE_SUBTITLE
+        value: Link pendek untuk Penang Driver Group
+
+  - type: web
+    name: linkkita
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: SITE_MODE
+        value: public
+      - key: BRAND
+        value: Link Pendek
+      - key: SITE_SUBTITLE
+        value: Buat link custom untuk apa-apa bisnes — makanan, servis, kedai & more

@@ -42,10 +42,20 @@ async function loadConfig() {
     if (config.brand) {
       document.getElementById('siteTitle').textContent = config.brand;
     }
+    if (config.subtitle) {
+      document.getElementById('siteSubtitle').textContent = config.subtitle;
+    }
+    document.title = config.brand + ' — Link Pendek';
+
+    const slugPlaceholder = config.isPublicSite ? 'nasi-lemak-ali' : 'Ridenow';
+    document.getElementById('customSlug').placeholder = slugPlaceholder;
+    document.getElementById('waSlug').placeholder = config.isPublicSite ? 'order-kuih' : 'Ridenow';
 
     if (config.isDeployed) {
-      document.getElementById('siteSubtitle').textContent = 'Link pendek percuma untuk bisnes anda';
-      document.getElementById('publicBanner').textContent = '✓ Live — penangdriver.onrender.com';
+      document.getElementById('siteSubtitle').textContent = config.subtitle;
+      document.getElementById('publicBanner').textContent = config.isPublicSite
+        ? '✓ Percuma — sesuai untuk semua jenis bisnes'
+        : '✓ Live — penangdriver.onrender.com';
       document.getElementById('publicBanner').classList.remove('hidden');
       document.getElementById('localWarning').classList.add('hidden');
       document.getElementById('deployInfo').classList.add('hidden');
