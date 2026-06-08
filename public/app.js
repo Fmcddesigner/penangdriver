@@ -8,9 +8,28 @@ const testLink = document.getElementById('testLink');
 const linksList = document.getElementById('linksList');
 let baseUrl = window.location.origin;
 
+async function fetchWithRetry(url, options = {}, retries = 8) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      const res = await fetch(url, options);
+      if (res.status === 404 && i < retries - 1) {
+        document.getElementById('wakeOverlay')?.classList.remove('hidden');
+        await new Promise(r => setTimeout(r, 8000));
+        continue;
+      }
+      document.getElementById('wakeOverlay')?.classList.add('hidden');
+      return res;
+    } catch {
+      document.getElementById('wakeOverlay')?.classList.remove('hidden');
+      await new Promise(r => setTimeout(r, 8000));
+    }
+  }
+  throw new Error('Server tidak respons');
+}
+
 async function loadConfig() {
   try {
-    const res = await fetch('/api/config');
+    const res = await fetchWithRetry('/api/config');
     const config = await res.json();
     baseUrl = config.baseUrl.replace(/\/$/, '');
 
@@ -26,8 +45,10 @@ async function loadConfig() {
 
     if (config.isDeployed) {
       document.getElementById('siteSubtitle').textContent = 'Link pendek percuma untuk bisnes anda';
-      document.getElementById('publicBanner').textContent = 'Link percuma aktif — boleh kongsi dalam WhatsApp';
+      document.getElementById('publicBanner').textContent = '✓ Live — penangdriver.onrender.com';
       document.getElementById('publicBanner').classList.remove('hidden');
+      document.getElementById('localWarning').classList.add('hidden');
+      document.getElementById('deployInfo').classList.add('hidden');
     } else if (config.isPublic) {
       document.getElementById('siteSubtitle').textContent = config.targetDomain
         ? `Sementara — deploy untuk dapat ${config.targetDomain}`
@@ -132,7 +153,7 @@ copyBtn.addEventListener('click', () => {
 
 async function loadLinks() {
   try {
-    const res = await fetch('/api/links');
+    const res = await fetchWithRetry('/api/links');
     const links = await res.json();
 
     if (links.length === 0) {
