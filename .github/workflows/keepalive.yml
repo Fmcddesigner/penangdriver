@@ -11,5 +11,5 @@ jobs:
     steps:
       - name: Wake penangdriver
         run: curl -fsS https://penangdriver.onrender.com/health || true
-      - name: Wake linkkita (public)
-        run: curl -fsS https://linkkita.onrender.com/health || true
+      - name: Wake linkmalaysia (public)
+        run: curl -fsS https://linkmalaysia.onrender.com/health || true
