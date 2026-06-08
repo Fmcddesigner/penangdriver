@@ -145,11 +145,70 @@ function escapeHtml(text) {
 }
 
 function resolveOgImage(imageUrl) {
-  if (!imageUrl) return `${BASE_URL}/og-image.svg`;
+  if (!imageUrl) return `${BASE_URL}/og-image.png`;
   const url = String(imageUrl).trim();
   if (/^https?:\/\//i.test(url)) return url;
   if (url.startsWith('/')) return `${BASE_URL}${url}`;
   return `${BASE_URL}/${url}`;
+}
+
+function ogImageMime(imageUrl) {
+  const base = String(imageUrl || '').split('?')[0].toLowerCase();
+  if (base.endsWith('.png')) return 'image/png';
+  if (base.endsWith('.webp')) return 'image/webp';
+  if (base.endsWith('.gif')) return 'image/gif';
+  return 'image/jpeg';
+}
+
+function isSocialCrawler(userAgent = '') {
+  return /facebookexternalhit|Facebot|Twitterbot|LinkedInBot|WhatsApp|TelegramBot|Slackbot|Discordbot|Pinterestbot|Googlebot|bingbot|vkShare|Embedly|Quora Link Preview/i.test(userAgent);
+}
+
+function buildOgPreviewHtml({ title, description, ogImage, shortUrl, destination, redirect }) {
+  const imageType = ogImageMime(ogImage);
+  const isDefaultImage = ogImage.endsWith('/og-image.png');
+  const imageSizeTags = isDefaultImage
+    ? `<meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">`
+    : '';
+  const redirectBlock = redirect
+    ? `<script>setTimeout(() => { window.location.href = ${JSON.stringify(destination)}; }, 600);</script>`
+    : '';
+  const bodyExtra = redirect
+    ? '<p style="font-family:Arial,sans-serif;margin:24px;">Membuka link...</p>'
+    : `<p style="font-family:Arial,sans-serif;margin:24px;">
+    <strong>${escapeHtml(title)}</strong><br/>
+    ${escapeHtml(description)}<br/>
+    <a href="${escapeHtml(destination)}">Teruskan ke link</a>
+  </p>`;
+
+  return `<!DOCTYPE html>
+<html lang="ms" prefix="og: https://ogp.me/ns#">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="${escapeHtml(description)}">
+  <link rel="canonical" href="${escapeHtml(shortUrl)}">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="${escapeHtml(site.brand || 'Link')}"}>
+  <meta property="og:title" content="${escapeHtml(title)}">
+  <meta property="og:description" content="${escapeHtml(description)}">
+  <meta property="og:url" content="${escapeHtml(shortUrl)}">
+  <meta property="og:image" content="${escapeHtml(ogImage)}">
+  <meta property="og:image:secure_url" content="${escapeHtml(ogImage)}">
+  <meta property="og:image:type" content="${imageType}">
+  ${imageSizeTags}
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="${escapeHtml(title)}">
+  <meta name="twitter:description" content="${escapeHtml(description)}">
+  <meta name="twitter:image" content="${escapeHtml(ogImage)}">
+  <title>${escapeHtml(title)}</title>
+</head>
+<body>
+  ${bodyExtra}
+  ${redirectBlock}
+</body>
+</html>`;
 }
 
 function makeShortUrl(slug) {
@@ -353,7 +412,10 @@ app.get('/:slug', async (req, res) => {
     return res.status(404).sendFile(path.join(__dirname, 'public', '404.html'));
   }
 
-  await store.incrementClicks(req.params.slug);
+  const crawler = isSocialCrawler(req.get('user-agent') || '');
+  if (!crawler) {
+    await store.incrementClicks(req.params.slug);
+  }
 
   const destination = link.url;
   const title = link.serviceName || site.brand || 'Custom URL Shortener';
@@ -361,41 +423,14 @@ app.get('/:slug', async (req, res) => {
   const ogImage = resolveOgImage(link.imageUrl);
   const shortUrl = makeShortUrl(req.params.slug);
 
-  // Important: WhatsApp preview bots read OG tags from HTML.
-  // We serve a small preview page here (instead of redirecting straight).
-  res.type('html').send(`<!DOCTYPE html>
-<html lang="ms">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta property="og:type" content="website">
-  <meta property="og:title" content="${escapeHtml(title)}">
-  <meta property="og:description" content="${escapeHtml(description)}">
-  <meta property="og:url" content="${escapeHtml(shortUrl)}">
-  <meta property="og:image" content="${escapeHtml(ogImage)}">
-  <meta property="twitter:card" content="summary_large_image">
-  <title>${escapeHtml(title)}</title>
-</head>
-<body>
-  <p style="font-family: Arial, sans-serif; margin: 24px;">
-    <strong>${escapeHtml(title)}</strong><br/>
-    Link akan dibuka sebentar lagi...
-  </p>
-
-  <noscript>
-    <p style="font-family: Arial, sans-serif; margin: 24px;">
-      Jika link tak dibuka otomatis, sila klik:
-      <a href="${escapeHtml(destination)}">${escapeHtml(destination)}</a>
-    </p>
-  </noscript>
-
-  <script>
-    setTimeout(() => {
-      window.location.href = ${JSON.stringify(destination)};
-    }, 800);
-  </script>
-</body>
-</html>`);
+  res.type('html').send(buildOgPreviewHtml({
+    title,
+    description,
+    ogImage,
+    shortUrl,
+    destination,
+    redirect: !crawler
+  }));
 });
 
 function startPublicTunnel() {

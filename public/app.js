@@ -202,13 +202,9 @@ function hideMessages() {
   errorEl.classList.add('hidden');
 }
 
-function formatDisplayUrl(url) {
-  return url.replace(/^https?:\/\//, '');
-}
-
 function showResult(data) {
   hideMessages();
-  shortUrlInput.value = formatDisplayUrl(data.shortUrl);
+  shortUrlInput.value = data.shortUrl;
   shortUrlInput.dataset.fullUrl = data.shortUrl;
   testLink.href = data.shortUrl;
   result.classList.remove('hidden');
@@ -342,6 +338,14 @@ copyBtn.addEventListener('click', () => {
   setTimeout(() => { copyBtn.textContent = 'Salin'; }, 2000);
 });
 
+linksList.addEventListener('click', (e) => {
+  const btn = e.target.closest('.link-copy');
+  if (!btn) return;
+  navigator.clipboard.writeText(btn.dataset.url);
+  btn.textContent = 'Tersalin!';
+  setTimeout(() => { btn.textContent = 'Salin'; }, 2000);
+});
+
 async function loadLinks() {
   try {
     const res = await apiFetch('/api/links');
@@ -356,7 +360,10 @@ async function loadLinks() {
     linksList.innerHTML = links.map(link => `
       <div class="link-item">
         <div class="link-info">
-          <a href="${link.shortUrl}" target="_blank" class="link-short">${formatDisplayUrl(link.shortUrl)}</a>
+          <div class="link-row">
+            <a href="${link.shortUrl}" target="_blank" class="link-short">${link.shortUrl}</a>
+            <button type="button" class="link-btn link-copy" data-url="${link.shortUrl}">Salin</button>
+          </div>
           <div class="link-original" title="${link.url}">${link.url}</div>
         </div>
         <div class="link-meta">
