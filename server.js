@@ -175,6 +175,28 @@ app.get('/api/links', (req, res) => {
   res.json(list);
 });
 
+app.patch('/api/links/:slug', (req, res) => {
+  const { newSlug } = req.body;
+  const links = readLinks();
+  const oldSlug = req.params.slug;
+
+  if (!links[oldSlug]) {
+    return res.status(404).json({ error: 'Link tidak dijumpai' });
+  }
+  if (!newSlug || !isValidSlug(newSlug)) {
+    return res.status(400).json({ error: 'Nama link tidak sah (huruf, nombor, - dan _ sahaja)' });
+  }
+  if (links[newSlug] && newSlug !== oldSlug) {
+    return res.status(409).json({ error: 'Nama link ini sudah digunakan' });
+  }
+
+  links[newSlug] = links[oldSlug];
+  if (newSlug !== oldSlug) delete links[oldSlug];
+  writeLinks(links);
+
+  res.json({ slug: newSlug, shortUrl: makeShortUrl(newSlug) });
+});
+
 app.delete('/api/links/:slug', (req, res) => {
   const links = readLinks();
   if (!links[req.params.slug]) {
@@ -241,7 +263,7 @@ async function start() {
         BASE_URL = tunnel.url;
         console.log(`  Sementara: ${BASE_URL}`);
         console.log(`\n  Nak link pendek PERCUMA macam:`);
-        console.log(`  penangdriver.onrender.com/grab`);
+        console.log(`  penangdriver.onrender.com/Ridenow`);
         console.log(`  → Deploy ke Render.com (percuma, 5 minit)\n`);
 
         tunnel.proc.on('close', () => {
