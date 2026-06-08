@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Custom URL Shortener</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="logo">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+          <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+        </svg>
+        <h1 id="siteTitle">Custom URL</h1>
+      </div>
+      <p class="subtitle" id="siteSubtitle">Tukar URL panjang kepada link pendek & custom</p>
+      <div id="publicBanner" class="public-banner hidden">
+        <span class="banner-dot"></span>
+        Link public aktif — boleh kongsi dalam WhatsApp
+      </div>
+      <div id="localWarning" class="local-warning hidden">
+        Link localhost tak boleh klik dalam WhatsApp. Restart server untuk dapat link public.
+      </div>
+      <div id="deployInfo" class="deploy-info hidden">
+        <strong>Nak link percuma pendek?</strong> Deploy ke Render.com (percuma) → dapat
+        <span id="targetDomainText">penangdrivergroup.onrender.com</span>
+      </div>
+    </header>
+
+    <div class="tabs">
+      <button class="tab active" data-tab="url">URL Biasa</button>
+      <button class="tab" data-tab="whatsapp">WhatsApp Link</button>
+    </div>
+
+    <div class="tab-content active" id="tab-url">
+      <form id="urlForm" class="card">
+        <div class="form-group">
+          <label for="originalUrl">URL Asal</label>
+          <input type="url" id="originalUrl" placeholder="https://example.com/page-panjang" required>
+        </div>
+        <div class="form-group">
+          <label for="customSlug">Custom Link <span class="optional">(pilihan)</span></label>
+          <div class="slug-input">
+            <span class="prefix" id="urlPrefix">.../</span>
+            <input type="text" id="customSlug" placeholder="promo-saya" pattern="[a-zA-Z0-9_-]+">
+          </div>
+        </div>
+        <button type="submit" class="btn-primary">Jana Link</button>
+      </form>
+    </div>
+
+    <div class="tab-content" id="tab-whatsapp">
+      <form id="waForm" class="card">
+        <div class="form-group">
+          <label for="waPhone">Nombor WhatsApp</label>
+          <input type="tel" id="waPhone" placeholder="60123456789" required>
+          <small>Format: 60123456789 (tanpa + atau -)</small>
+        </div>
+        <div class="form-group">
+          <label for="waMessage">Mesej Default <span class="optional">(pilihan)</span></label>
+          <textarea id="waMessage" rows="2" placeholder="Hai, saya berminat dengan produk anda..."></textarea>
+        </div>
+        <div class="form-group">
+          <label for="waSlug">Custom Link <span class="optional">(pilihan)</span></label>
+          <div class="slug-input">
+            <span class="prefix" id="waPrefix">.../</span>
+            <input type="text" id="waSlug" placeholder="chat-saya" pattern="[a-zA-Z0-9_-]+">
+          </div>
+        </div>
+        <button type="submit" class="btn-primary btn-whatsapp">Jana WhatsApp Link</button>
+      </form>
+    </div>
+
+    <div id="result" class="result hidden">
+      <div class="result-icon">✓</div>
+      <p class="result-label">Link anda siap!</p>
+      <div class="result-url">
+        <input type="text" id="shortUrl" readonly>
+        <button id="copyBtn" class="btn-copy">Salin</button>
+      </div>
+      <a id="testLink" href="#" target="_blank" class="test-link">Test link →</a>
+    </div>
+
+    <div id="error" class="error hidden"></div>
+
+    <section class="links-section">
+      <h2>Link Tersimpan</h2>
+      <div id="linksList" class="links-list">
+        <p class="empty">Tiada link lagi. Jana link pertama anda di atas!</p>
+      </div>
+    </section>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
