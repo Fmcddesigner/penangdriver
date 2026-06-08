@@ -32,3 +32,5 @@ services:
         value: MY Hub
       - key: SITE_SUBTITLE
         value: Buat link custom untuk apa-apa bisnes — makanan, servis, kedai & more
+      - key: AUTH_ENABLED
+        value: "true"

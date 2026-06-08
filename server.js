@@ -2,6 +2,7 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const { spawn } = require('child_process');
+const { getAuth, requireAuth, registerAuthRoutes } = require('./auth');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -35,6 +36,7 @@ function getSiteSettings() {
 }
 
 const site = getSiteSettings();
+const AUTH_ENABLED = site.isPublicSite || process.env.AUTH_ENABLED === 'true';
 const DATA_FILE = process.env.DATA_FILE
   ? path.join(__dirname, process.env.DATA_FILE)
   : path.join(__dirname, 'data', site.isPublicSite ? 'links-public.json' : 'links.json');
@@ -121,6 +123,20 @@ function makeShortUrl(slug) {
   return `${BASE_URL}/${slug}`;
 }
 
+function maybeAuth(req, res, next) {
+  if (AUTH_ENABLED) return requireAuth(req, res, next);
+  next();
+}
+
+function canManageLink(link, auth) {
+  if (!AUTH_ENABLED) return true;
+  if (!auth) return false;
+  if (auth.role === 'admin') return true;
+  return link.owner === auth.username;
+}
+
+registerAuthRoutes(app, { authEnabled: AUTH_ENABLED });
+
 app.get('/api/config', (req, res) => {
   const domain = BASE_URL.replace(/^https?:\/\//, '');
   const targetDomain = getTargetDomain();
@@ -135,11 +151,12 @@ app.get('/api/config', (req, res) => {
     isPublic: !BASE_URL.includes('localhost'),
     isCustomDomain: !!process.env.RENDER_EXTERNAL_URL,
     isLocal: IS_LOCAL && !BASE_URL.includes('trycloudflare'),
-    isDeployed: !!process.env.RENDER_EXTERNAL_URL
+    isDeployed: !!process.env.RENDER_EXTERNAL_URL,
+    authEnabled: AUTH_ENABLED
   });
 });
 
-app.post('/api/shorten', (req, res) => {
+app.post('/api/shorten', maybeAuth, (req, res) => {
   const { url, slug: customSlug } = req.body;
 
   if (!url || !isValidUrl(url)) {
@@ -164,6 +181,7 @@ app.post('/api/shorten', (req, res) => {
 
   links[slug] = {
     url,
+    owner: req.auth?.username || 'public',
     createdAt: new Date().toISOString(),
     clicks: 0
   };
@@ -172,7 +190,7 @@ app.post('/api/shorten', (req, res) => {
   res.json({ slug, shortUrl: makeShortUrl(slug), originalUrl: url });
 });
 
-app.post('/api/whatsapp', (req, res) => {
+app.post('/api/whatsapp', maybeAuth, (req, res) => {
   const { phone, message, slug: customSlug } = req.body;
 
   if (!phone || !/^\d{8,15}$/.test(phone.replace(/\D/g, ''))) {
@@ -205,6 +223,7 @@ app.post('/api/whatsapp', (req, res) => {
     type: 'whatsapp',
     phone: cleanPhone,
     message: message || '',
+    owner: req.auth?.username || 'public',
     createdAt: new Date().toISOString(),
     clicks: 0
   };
@@ -213,9 +232,11 @@ app.post('/api/whatsapp', (req, res) => {
   res.json({ slug, shortUrl: makeShortUrl(slug), originalUrl: waUrl });
 });
 
-app.get('/api/links', (req, res) => {
+app.get('/api/links', maybeAuth, (req, res) => {
   const links = readLinks();
+  const auth = req.auth;
   const list = Object.entries(links)
+    .filter(([, data]) => !AUTH_ENABLED || auth?.role === 'admin' || data.owner === auth?.username)
     .map(([slug, data]) => ({
       slug,
       shortUrl: makeShortUrl(slug),
@@ -225,13 +246,16 @@ app.get('/api/links', (req, res) => {
   res.json(list);
 });
 
-app.patch('/api/links/:slug', (req, res) => {
+app.patch('/api/links/:slug', maybeAuth, (req, res) => {
   const { newSlug } = req.body;
   const links = readLinks();
   const oldSlug = req.params.slug;
 
   if (!links[oldSlug]) {
     return res.status(404).json({ error: 'Link tidak dijumpai' });
+  }
+  if (!canManageLink(links[oldSlug], req.auth)) {
+    return res.status(403).json({ error: 'Anda tak boleh edit link ini' });
   }
   if (!newSlug || !isValidSlug(newSlug)) {
     return res.status(400).json({ error: 'Nama link tidak sah (huruf, nombor, - dan _ sahaja)' });
@@ -247,10 +271,13 @@ app.patch('/api/links/:slug', (req, res) => {
   res.json({ slug: newSlug, shortUrl: makeShortUrl(newSlug) });
 });
 
-app.delete('/api/links/:slug', (req, res) => {
+app.delete('/api/links/:slug', maybeAuth, (req, res) => {
   const links = readLinks();
   if (!links[req.params.slug]) {
     return res.status(404).json({ error: 'Link tidak dijumpai' });
+  }
+  if (!canManageLink(links[req.params.slug], req.auth)) {
+    return res.status(403).json({ error: 'Anda tak boleh padam link ini' });
   }
   delete links[req.params.slug];
   writeLinks(links);

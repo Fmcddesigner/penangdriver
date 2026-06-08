@@ -14,7 +14,42 @@
     </div>
   </div>
   <div class="container">
+    <div id="loginScreen" class="login-screen hidden">
+      <div class="card login-card">
+        <h2>Login</h2>
+        <p class="login-desc">Masuk dengan username & password yang diberikan</p>
+        <form id="loginForm">
+          <div class="form-group">
+            <label for="loginUser">Username</label>
+            <input type="text" id="loginUser" placeholder="contoh: ali-makanan" required>
+          </div>
+          <div class="form-group">
+            <label for="loginPass">Password</label>
+            <input type="password" id="loginPass" placeholder="Password anda" required>
+          </div>
+          <button type="submit" class="btn-primary">Masuk</button>
+        </form>
+        <button type="button" id="showAdminLogin" class="link-btn">Admin Login</button>
+      </div>
+      <div id="adminLoginScreen" class="card login-card hidden">
+        <h2>Admin</h2>
+        <form id="adminLoginForm">
+          <div class="form-group">
+            <label for="adminPass">Password Admin</label>
+            <input type="password" id="adminPass" placeholder="Password admin" required>
+          </div>
+          <button type="submit" class="btn-primary">Masuk Admin</button>
+        </form>
+        <button type="button" id="backToUserLogin" class="link-btn">← Kembali ke User Login</button>
+      </div>
+    </div>
+
+    <div id="mainApp">
     <header>
+      <div class="user-bar hidden" id="userBar">
+        <span id="loggedInAs"></span>
+        <button type="button" id="logoutBtn" class="link-btn">Log Keluar</button>
+      </div>
       <div class="logo">
         <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
@@ -36,9 +71,10 @@
       </div>
     </header>
 
-    <div class="tabs">
+    <div class="tabs" id="mainTabs">
       <button class="tab active" data-tab="url">URL Biasa</button>
       <button class="tab" data-tab="whatsapp">WhatsApp Link</button>
+      <button class="tab hidden" data-tab="admin" id="adminTab">Admin</button>
     </div>
 
     <div class="tab-content active" id="tab-url">
@@ -80,6 +116,25 @@
       </form>
     </div>
 
+    <div class="tab-content" id="tab-admin">
+      <div class="card">
+        <h3 class="admin-title">Urus Pengguna</h3>
+        <p class="admin-desc">Tambah username & password untuk orang nak guna servis ni</p>
+        <form id="addUserForm" class="admin-form">
+          <div class="form-group">
+            <label for="newUsername">Username</label>
+            <input type="text" id="newUsername" placeholder="ali-makanan" pattern="[a-zA-Z0-9_-]+" required>
+          </div>
+          <div class="form-group">
+            <label for="newPassword">Password</label>
+            <input type="text" id="newPassword" placeholder="password untuk user" required>
+          </div>
+          <button type="submit" class="btn-primary">Tambah User</button>
+        </form>
+        <div id="usersList" class="users-list"></div>
+      </div>
+    </div>
+
     <div id="result" class="result hidden">
       <div class="result-icon">✓</div>
       <p class="result-label">Link anda siap!</p>
@@ -98,6 +153,7 @@
         <p class="empty">Tiada link lagi. Jana link pertama anda di atas!</p>
       </div>
     </section>
+    </div>
   </div>
 
   <script src="app.js"></script>
