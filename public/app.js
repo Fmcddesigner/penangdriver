@@ -282,10 +282,18 @@ urlForm.addEventListener('submit', async (e) => {
   const url = document.getElementById('originalUrl').value.trim();
   const slug = document.getElementById('customSlug').value.trim();
   const imageUrl = document.getElementById('imageUrl').value.trim();
+  const serviceName = document.getElementById('serviceName').value.trim();
+  const serviceDetail = document.getElementById('serviceDetail').value.trim();
   try {
     const res = await apiFetch('/api/shorten', {
       method: 'POST',
-      body: JSON.stringify({ url, slug: slug || undefined, imageUrl: imageUrl || undefined })
+      body: JSON.stringify({
+        url,
+        slug: slug || undefined,
+        imageUrl: imageUrl || undefined,
+        serviceName,
+        serviceDetail
+      })
     });
     const data = await res.json();
     if (!res.ok) return showError(data.error);
@@ -303,10 +311,19 @@ waForm.addEventListener('submit', async (e) => {
   const message = document.getElementById('waMessage').value.trim();
   const slug = document.getElementById('waSlug').value.trim();
   const waImageUrl = document.getElementById('waImageUrl').value.trim();
+  const serviceName = document.getElementById('waServiceName').value.trim();
+  const serviceDetail = document.getElementById('waServiceDetail').value.trim();
   try {
     const res = await apiFetch('/api/whatsapp', {
       method: 'POST',
-      body: JSON.stringify({ phone, message, slug: slug || undefined, imageUrl: waImageUrl || undefined })
+      body: JSON.stringify({
+        phone,
+        message,
+        slug: slug || undefined,
+        imageUrl: waImageUrl || undefined,
+        serviceName,
+        serviceDetail
+      })
     });
     const data = await res.json();
     if (!res.ok) return showError(data.error);

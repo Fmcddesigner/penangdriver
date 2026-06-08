@@ -96,6 +96,16 @@
           </div>
         </div>
         <div class="form-group">
+          <label for="serviceName">Nama Servis</label>
+          <input type="text" id="serviceName" placeholder="cth: Rakan Pemandu E-Hailing" maxlength="100" required>
+          <small>Tajuk yang keluar bila share link dalam WhatsApp</small>
+        </div>
+        <div class="form-group">
+          <label for="serviceDetail">Detail Servis</label>
+          <textarea id="serviceDetail" rows="2" placeholder="cth: Servis e-hailing 24 jam di Pulau Pinang" maxlength="300" required></textarea>
+          <small>Penerangan ringkas di bawah tajuk preview WhatsApp</small>
+        </div>
+        <div class="form-group">
           <label for="imageFile">Gambar Preview WhatsApp <span class="optional">(pilihan)</span></label>
           <input type="file" id="imageFile" accept="image/*" class="file-input">
           <input type="hidden" id="imageUrl">
@@ -126,6 +136,16 @@
             <span class="prefix" id="waPrefix">.../</span>
             <input type="text" id="waSlug" placeholder="Ridenow" pattern="[a-zA-Z0-9_-]+">
           </div>
+        </div>
+        <div class="form-group">
+          <label for="waServiceName">Nama Servis</label>
+          <input type="text" id="waServiceName" placeholder="cth: Rakan Pemandu E-Hailing" maxlength="100" required>
+          <small>Tajuk yang keluar bila share link dalam WhatsApp</small>
+        </div>
+        <div class="form-group">
+          <label for="waServiceDetail">Detail Servis</label>
+          <textarea id="waServiceDetail" rows="2" placeholder="cth: Servis e-hailing 24 jam di Pulau Pinang" maxlength="300" required></textarea>
+          <small>Penerangan ringkas di bawah tajuk preview WhatsApp</small>
         </div>
         <div class="form-group">
           <label for="waImageFile">Gambar Preview WhatsApp <span class="optional">(pilihan)</span></label>

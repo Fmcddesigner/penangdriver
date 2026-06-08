@@ -211,7 +211,7 @@ app.get('/api/config', (req, res) => {
 });
 
 app.post('/api/shorten', maybeAuth, async (req, res) => {
-  const { url, slug: customSlug, imageUrl } = req.body;
+  const { url, slug: customSlug, imageUrl, serviceName, serviceDetail } = req.body;
 
   if (!url || !isValidUrl(url)) {
     return res.status(400).json({ error: 'URL tidak sah. Pastikan bermula dengan http:// atau https://' });
@@ -239,6 +239,8 @@ app.post('/api/shorten', maybeAuth, async (req, res) => {
   await store.saveLink(slug, {
     url,
     imageUrl: imageUrl || undefined,
+    serviceName: serviceName?.trim() || undefined,
+    serviceDetail: serviceDetail?.trim() || undefined,
     owner: req.auth?.username || 'public',
     createdAt: new Date().toISOString(),
     clicks: 0
@@ -248,7 +250,7 @@ app.post('/api/shorten', maybeAuth, async (req, res) => {
 });
 
 app.post('/api/whatsapp', maybeAuth, async (req, res) => {
-  const { phone, message, slug: customSlug, imageUrl } = req.body;
+  const { phone, message, slug: customSlug, imageUrl, serviceName, serviceDetail } = req.body;
 
   if (!phone || !/^\d{8,15}$/.test(phone.replace(/\D/g, ''))) {
     return res.status(400).json({ error: 'Nombor telefon tidak sah (8-15 digit)' });
@@ -284,6 +286,8 @@ app.post('/api/whatsapp', maybeAuth, async (req, res) => {
     phone: cleanPhone,
     message: message || '',
     imageUrl: imageUrl || undefined,
+    serviceName: serviceName?.trim() || undefined,
+    serviceDetail: serviceDetail?.trim() || undefined,
     owner: req.auth?.username || 'public',
     createdAt: new Date().toISOString(),
     clicks: 0
@@ -352,9 +356,10 @@ app.get('/:slug', async (req, res) => {
   await store.incrementClicks(req.params.slug);
 
   const destination = link.url;
-  const title = site.brand || 'Custom URL Shortener';
-  const description = site.subtitle || 'Preview link';
+  const title = link.serviceName || site.brand || 'Custom URL Shortener';
+  const description = link.serviceDetail || site.subtitle || 'Preview link';
   const ogImage = resolveOgImage(link.imageUrl);
+  const shortUrl = makeShortUrl(req.params.slug);
 
   // Important: WhatsApp preview bots read OG tags from HTML.
   // We serve a small preview page here (instead of redirecting straight).
@@ -366,6 +371,7 @@ app.get('/:slug', async (req, res) => {
   <meta property="og:type" content="website">
   <meta property="og:title" content="${escapeHtml(title)}">
   <meta property="og:description" content="${escapeHtml(description)}">
+  <meta property="og:url" content="${escapeHtml(shortUrl)}">
   <meta property="og:image" content="${escapeHtml(ogImage)}">
   <meta property="twitter:card" content="summary_large_image">
   <title>${escapeHtml(title)}</title>
