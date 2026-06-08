@@ -1,0 +1,54 @@
+SETUP FIREBASE — IKUT LANGKAH NI
+=================================
+
+LANGKAH 1 — Firestore Database
+  Firebase Console → Build → Firestore Database
+  → Create database
+  → Pilih region: asia-southeast1 (Singapore)
+  → Start in production mode
+
+LANGKAH 2 — Storage
+  Firebase Console → Build → Storage
+  → Get started
+  → Start in production mode
+  → Pilih region yang sama
+
+LANGKAH 3 — Service Account Key
+  Firebase Console → Project Settings (gear icon)
+  → Tab "Service accounts"
+  → Klik "Generate new private key"
+  → Download fail JSON (contoh: my-hub-firebase-adminsdk.json)
+  → JANGAN upload fail ni ke GitHub!
+
+LANGKAH 4 — Tambah ke Render (servis malaysia-ewfn)
+  Render → servis anda → Environment → Add:
+
+  Key: FIREBASE_SERVICE_ACCOUNT_JSON
+  Value: paste SEMUA isi fail JSON (satu baris pun OK)
+
+  Key: FIREBASE_STORAGE_BUCKET
+  Value: nama bucket dari Firebase Storage
+         (contoh: my-project.appspot.com atau my-project.firebasestorage.app)
+         → tengok dalam Storage → Files, URL atas tu
+
+  Key: FIREBASE_SITE_KEY
+  Value: public
+
+  (Kekalkan env var sedia ada: SITE_MODE, BRAND, ADMIN_PASSWORD, JWT_SECRET)
+
+LANGKAH 5 — Deploy
+  Render → Manual Deploy → Deploy latest commit
+
+LANGKAH 6 — Test
+  Buka: https://malaysia-ewfn.onrender.com/health
+  Patut nampak: "storage": "firebase"
+
+  Lepas tu:
+  - Tambah user dalam Admin
+  - Buat short URL
+  - Upload gambar dari galeri
+  - Deploy lagi → data PATUT KEKAL!
+
+NOTA:
+- Tanpa Firebase env var, app guna fail tempatan (data boleh hilang lepas deploy)
+- Dengan Firebase, URL + user + gambar KEKAL selamanya

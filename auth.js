@@ -1,25 +1,9 @@
-const fs = require('fs');
-const path = require('path');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 
-const USERS_FILE = path.join(__dirname, 'data', 'users.json');
 const JWT_SECRET = process.env.JWT_SECRET || 'tukar-jwt-secret-dalam-render';
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '';
 const TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000;
-
-function readUsers() {
-  try {
-    return JSON.parse(fs.readFileSync(USERS_FILE, 'utf8'));
-  } catch {
-    return {};
-  }
-}
-
-function writeUsers(users) {
-  fs.mkdirSync(path.dirname(USERS_FILE), { recursive: true });
-  fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2));
-}
 
 function isValidUsername(username) {
   return /^[a-zA-Z0-9_-]{2,20}$/.test(username);
@@ -78,55 +62,11 @@ function requireAdmin(req, res, next) {
   next();
 }
 
-async function createUser(username, password) {
-  const users = readUsers();
-  if (users[username]) {
-    throw new Error('Username sudah wujud');
-  }
-  users[username] = {
-    passwordHash: await bcrypt.hash(password, 10),
-    createdAt: new Date().toISOString()
-  };
-  writeUsers(users);
-}
-
-async function verifyUser(username, password) {
-  const users = readUsers();
-  const user = users[username];
-  if (!user) return false;
-  return bcrypt.compare(password, user.passwordHash);
-}
-
-async function updateUserPassword(username, password) {
-  const users = readUsers();
-  if (!users[username]) {
-    throw new Error('User tidak dijumpai');
-  }
-  users[username].passwordHash = await bcrypt.hash(password, 10);
-  writeUsers(users);
-}
-
-function deleteUser(username) {
-  const users = readUsers();
-  if (!users[username]) {
-    throw new Error('User tidak dijumpai');
-  }
-  delete users[username];
-  writeUsers(users);
-}
-
-function listUsers() {
-  return Object.entries(readUsers()).map(([username, data]) => ({
-    username,
-    createdAt: data.createdAt
-  }));
-}
-
 function verifyAdminPassword(password) {
   return ADMIN_PASSWORD && password === ADMIN_PASSWORD;
 }
 
-function registerAuthRoutes(app, { authEnabled }) {
+function registerAuthRoutes(app, { authEnabled, store }) {
   app.get('/api/auth/status', (req, res) => {
     const auth = getAuth(req);
     res.json({
@@ -144,8 +84,8 @@ function registerAuthRoutes(app, { authEnabled }) {
     if (!isValidUsername(username)) {
       return res.status(400).json({ error: 'Username tidak sah' });
     }
-    const ok = await verifyUser(username, password);
-    if (!ok) {
+    const user = await store.getUser(username);
+    if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
       return res.status(401).json({ error: 'Username atau password salah' });
     }
     const token = signToken({ username, role: 'user' });
@@ -161,8 +101,8 @@ function registerAuthRoutes(app, { authEnabled }) {
     res.json({ token, username: 'admin', role: 'admin' });
   });
 
-  app.get('/api/admin/users', requireAdmin, (req, res) => {
-    res.json(listUsers());
+  app.get('/api/admin/users', requireAdmin, async (req, res) => {
+    res.json(await store.listUsers());
   });
 
   app.post('/api/admin/users', requireAdmin, async (req, res) => {
@@ -177,10 +117,17 @@ function registerAuthRoutes(app, { authEnabled }) {
       return res.status(400).json({ error: 'Password minimum 4 aksara' });
     }
     try {
-      await createUser(username, password);
+      const existing = await store.getUser(username);
+      if (existing) {
+        return res.status(409).json({ error: 'Username sudah wujud' });
+      }
+      await store.saveUser(username, {
+        passwordHash: await bcrypt.hash(password, 10),
+        createdAt: new Date().toISOString()
+      });
       res.json({ success: true, username });
     } catch (err) {
-      res.status(409).json({ error: err.message });
+      res.status(500).json({ error: err.message });
     }
   });
 
@@ -189,21 +136,24 @@ function registerAuthRoutes(app, { authEnabled }) {
     if (!password || password.length < 4) {
       return res.status(400).json({ error: 'Password minimum 4 aksara' });
     }
-    try {
-      await updateUserPassword(req.params.username, password);
-      res.json({ success: true });
-    } catch (err) {
-      res.status(404).json({ error: err.message });
+    const user = await store.getUser(req.params.username);
+    if (!user) {
+      return res.status(404).json({ error: 'User tidak dijumpai' });
     }
+    await store.saveUser(req.params.username, {
+      ...user,
+      passwordHash: await bcrypt.hash(password, 10)
+    });
+    res.json({ success: true });
   });
 
-  app.delete('/api/admin/users/:username', requireAdmin, (req, res) => {
-    try {
-      deleteUser(req.params.username);
-      res.json({ success: true });
-    } catch (err) {
-      res.status(404).json({ error: err.message });
+  app.delete('/api/admin/users/:username', requireAdmin, async (req, res) => {
+    const user = await store.getUser(req.params.username);
+    if (!user) {
+      return res.status(404).json({ error: 'User tidak dijumpai' });
     }
+    await store.deleteUser(req.params.username);
+    res.json({ success: true });
   });
 }
 

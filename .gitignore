@@ -3,3 +3,4 @@ data/links-public.json
 data/users.json
 public/uploads/*
 !public/uploads/.gitkeep
+firebase-service-account.json

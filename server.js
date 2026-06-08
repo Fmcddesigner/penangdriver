@@ -4,23 +4,27 @@ const path = require('path');
 const crypto = require('crypto');
 const { spawn } = require('child_process');
 const multer = require('multer');
+const firebase = require('./firebase');
+const { createStore } = require('./store');
 const { getAuth, requireAuth, registerAuthRoutes } = require('./auth');
 
 const UPLOAD_DIR = path.join(__dirname, 'public', 'uploads');
 const ALLOWED_IMAGE_EXT = new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif']);
 
 const upload = multer({
-  storage: multer.diskStorage({
-    destination: (req, file, cb) => {
-      fs.mkdirSync(UPLOAD_DIR, { recursive: true });
-      cb(null, UPLOAD_DIR);
-    },
-    filename: (req, file, cb) => {
-      const ext = path.extname(file.originalname).toLowerCase();
-      const safeExt = ALLOWED_IMAGE_EXT.has(ext) ? ext : '.jpg';
-      cb(null, `${Date.now()}-${crypto.randomBytes(4).toString('hex')}${safeExt}`);
-    }
-  }),
+  storage: firebase.isEnabled()
+    ? multer.memoryStorage()
+    : multer.diskStorage({
+      destination: (req, file, cb) => {
+        fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+        cb(null, UPLOAD_DIR);
+      },
+      filename: (req, file, cb) => {
+        const ext = path.extname(file.originalname).toLowerCase();
+        const safeExt = ALLOWED_IMAGE_EXT.has(ext) ? ext : '.jpg';
+        cb(null, `${Date.now()}-${crypto.randomBytes(4).toString('hex')}${safeExt}`);
+      }
+    }),
   limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     if (/^image\//.test(file.mimetype)) cb(null, true);
@@ -61,9 +65,7 @@ function getSiteSettings() {
 
 const site = getSiteSettings();
 const AUTH_ENABLED = site.isPublicSite || process.env.AUTH_ENABLED === 'true';
-const DATA_FILE = process.env.DATA_FILE
-  ? path.join(__dirname, process.env.DATA_FILE)
-  : path.join(__dirname, 'data', site.isPublicSite ? 'links-public.json' : 'links.json');
+const store = createStore({ isPublicSite: site.isPublicSite });
 
 function resolveBaseUrl() {
   if (process.env.RENDER_EXTERNAL_URL) return process.env.RENDER_EXTERNAL_URL;
@@ -83,25 +85,18 @@ app.use(express.json());
 app.use(express.static('public'));
 
 app.get('/health', (req, res) => {
-  res.json({ ok: true, service: site.brand, mode: site.mode });
+  res.json({
+    ok: true,
+    service: site.brand,
+    mode: site.mode,
+    storage: store.useFirebase ? 'firebase' : 'file',
+    siteKey: store.siteKey
+  });
 });
 
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
-
-function readLinks() {
-  try {
-    return JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
-  } catch {
-    return {};
-  }
-}
-
-function writeLinks(links) {
-  fs.mkdirSync(path.dirname(DATA_FILE), { recursive: true });
-  fs.writeFileSync(DATA_FILE, JSON.stringify(links, null, 2));
-}
 
 const DEFAULT_LINKS = {
   Ridenow: {
@@ -111,15 +106,11 @@ const DEFAULT_LINKS = {
   }
 };
 
-function initData() {
-  fs.mkdirSync(path.dirname(DATA_FILE), { recursive: true });
-  const links = readLinks();
-  if (Object.keys(links).length === 0 && site.seedDefaults) {
-    writeLinks(DEFAULT_LINKS);
+async function initData() {
+  if (site.seedDefaults) {
+    await store.seedLinks(DEFAULT_LINKS);
   }
 }
-
-initData();
 
 function generateSlug(length = 6) {
   const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
@@ -176,17 +167,22 @@ function canManageLink(link, auth) {
   return link.owner === auth.username;
 }
 
-registerAuthRoutes(app, { authEnabled: AUTH_ENABLED });
+registerAuthRoutes(app, { authEnabled: AUTH_ENABLED, store });
 
 app.post('/api/upload-image', maybeAuth, (req, res) => {
-  upload.single('image')(req, res, (err) => {
+  upload.single('image')(req, res, async (err) => {
     if (err) {
       return res.status(400).json({ error: err.message || 'Gagal muat naik gambar' });
     }
     if (!req.file) {
       return res.status(400).json({ error: 'Tiada gambar dipilih' });
     }
-    res.json({ imageUrl: `${BASE_URL}/uploads/${req.file.filename}` });
+    try {
+      const imageUrl = await store.uploadImage(req.file);
+      res.json({ imageUrl });
+    } catch (uploadErr) {
+      res.status(500).json({ error: uploadErr.message || 'Gagal muat naik gambar' });
+    }
   });
 });
 
@@ -205,11 +201,12 @@ app.get('/api/config', (req, res) => {
     isCustomDomain: !!process.env.RENDER_EXTERNAL_URL,
     isLocal: IS_LOCAL && !BASE_URL.includes('trycloudflare'),
     isDeployed: !!process.env.RENDER_EXTERNAL_URL,
-    authEnabled: AUTH_ENABLED
+    authEnabled: AUTH_ENABLED,
+    storageBackend: store.useFirebase ? 'firebase' : 'file'
   });
 });
 
-app.post('/api/shorten', maybeAuth, (req, res) => {
+app.post('/api/shorten', maybeAuth, async (req, res) => {
   const { url, slug: customSlug, imageUrl } = req.body;
 
   if (!url || !isValidUrl(url)) {
@@ -220,35 +217,33 @@ app.post('/api/shorten', maybeAuth, (req, res) => {
     return res.status(400).json({ error: 'Image URL tidak sah. Guna pautan http:// atau https://' });
   }
 
-  const links = readLinks();
   let slug = customSlug?.trim();
 
   if (slug) {
     if (!isValidSlug(slug)) {
       return res.status(400).json({ error: 'Custom slug hanya boleh huruf, nombor, - dan _ (2-30 aksara)' });
     }
-    if (links[slug]) {
+    if (await store.getLink(slug)) {
       return res.status(409).json({ error: 'Slug ini sudah digunakan. Pilih nama lain.' });
     }
   } else {
     do {
       slug = generateSlug();
-    } while (links[slug]);
+    } while (await store.getLink(slug));
   }
 
-  links[slug] = {
+  await store.saveLink(slug, {
     url,
     imageUrl: imageUrl || undefined,
     owner: req.auth?.username || 'public',
     createdAt: new Date().toISOString(),
     clicks: 0
-  };
-  writeLinks(links);
+  });
 
   res.json({ slug, shortUrl: makeShortUrl(slug), originalUrl: url });
 });
 
-app.post('/api/whatsapp', maybeAuth, (req, res) => {
+app.post('/api/whatsapp', maybeAuth, async (req, res) => {
   const { phone, message, slug: customSlug, imageUrl } = req.body;
 
   if (!phone || !/^\d{8,15}$/.test(phone.replace(/\D/g, ''))) {
@@ -264,23 +259,22 @@ app.post('/api/whatsapp', maybeAuth, (req, res) => {
     ? `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`
     : `https://wa.me/${cleanPhone}`;
 
-  const links = readLinks();
   let slug = customSlug?.trim();
 
   if (slug) {
     if (!isValidSlug(slug)) {
       return res.status(400).json({ error: 'Custom slug hanya boleh huruf, nombor, - dan _ (2-30 aksara)' });
     }
-    if (links[slug]) {
+    if (await store.getLink(slug)) {
       return res.status(409).json({ error: 'Slug ini sudah digunakan. Pilih nama lain.' });
     }
   } else {
     do {
       slug = generateSlug();
-    } while (links[slug]);
+    } while (await store.getLink(slug));
   }
 
-  links[slug] = {
+  await store.saveLink(slug, {
     url: waUrl,
     type: 'whatsapp',
     phone: cleanPhone,
@@ -289,14 +283,13 @@ app.post('/api/whatsapp', maybeAuth, (req, res) => {
     owner: req.auth?.username || 'public',
     createdAt: new Date().toISOString(),
     clicks: 0
-  };
-  writeLinks(links);
+  });
 
   res.json({ slug, shortUrl: makeShortUrl(slug), originalUrl: waUrl });
 });
 
-app.get('/api/links', maybeAuth, (req, res) => {
-  const links = readLinks();
+app.get('/api/links', maybeAuth, async (req, res) => {
+  const links = await store.getAllLinks();
   const auth = req.auth;
   const list = Object.entries(links)
     .filter(([, data]) => !AUTH_ENABLED || auth?.role === 'admin' || data.owner === auth?.username)
@@ -309,54 +302,50 @@ app.get('/api/links', maybeAuth, (req, res) => {
   res.json(list);
 });
 
-app.patch('/api/links/:slug', maybeAuth, (req, res) => {
+app.patch('/api/links/:slug', maybeAuth, async (req, res) => {
   const { newSlug } = req.body;
-  const links = readLinks();
   const oldSlug = req.params.slug;
+  const link = await store.getLink(oldSlug);
 
-  if (!links[oldSlug]) {
+  if (!link) {
     return res.status(404).json({ error: 'Link tidak dijumpai' });
   }
-  if (!canManageLink(links[oldSlug], req.auth)) {
+  if (!canManageLink(link, req.auth)) {
     return res.status(403).json({ error: 'Anda tak boleh edit link ini' });
   }
   if (!newSlug || !isValidSlug(newSlug)) {
     return res.status(400).json({ error: 'Nama link tidak sah (huruf, nombor, - dan _ sahaja)' });
   }
-  if (links[newSlug] && newSlug !== oldSlug) {
+  if (newSlug !== oldSlug && await store.getLink(newSlug)) {
     return res.status(409).json({ error: 'Nama link ini sudah digunakan' });
   }
 
-  links[newSlug] = links[oldSlug];
-  if (newSlug !== oldSlug) delete links[oldSlug];
-  writeLinks(links);
+  await store.saveLink(newSlug, link);
+  if (newSlug !== oldSlug) await store.deleteLink(oldSlug);
 
   res.json({ slug: newSlug, shortUrl: makeShortUrl(newSlug) });
 });
 
-app.delete('/api/links/:slug', maybeAuth, (req, res) => {
-  const links = readLinks();
-  if (!links[req.params.slug]) {
+app.delete('/api/links/:slug', maybeAuth, async (req, res) => {
+  const link = await store.getLink(req.params.slug);
+  if (!link) {
     return res.status(404).json({ error: 'Link tidak dijumpai' });
   }
-  if (!canManageLink(links[req.params.slug], req.auth)) {
+  if (!canManageLink(link, req.auth)) {
     return res.status(403).json({ error: 'Anda tak boleh padam link ini' });
   }
-  delete links[req.params.slug];
-  writeLinks(links);
+  await store.deleteLink(req.params.slug);
   res.json({ success: true });
 });
 
-app.get('/:slug', (req, res) => {
-  const links = readLinks();
-  const link = links[req.params.slug];
+app.get('/:slug', async (req, res) => {
+  const link = await store.getLink(req.params.slug);
 
   if (!link) {
     return res.status(404).sendFile(path.join(__dirname, 'public', '404.html'));
   }
 
-  link.clicks++;
-  writeLinks(links);
+  await store.incrementClicks(req.params.slug);
 
   const destination = link.url;
   const title = site.brand || 'Custom URL Shortener';
@@ -426,8 +415,11 @@ function startPublicTunnel() {
 }
 
 async function start() {
+  await initData();
+
   app.listen(PORT, '0.0.0.0', async () => {
     console.log(`\n  Custom URL Shortener berjalan!`);
+    console.log(`  Storage: ${store.useFirebase ? 'Firebase' : 'File'}`);
     console.log(`  Local:  http://localhost:${PORT}`);
 
     if (process.env.RENDER_EXTERNAL_URL) {
